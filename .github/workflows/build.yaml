@@ -1,0 +1,51 @@
+name: Deploy to Windows EC2 and Upload to S3
+
+on:
+  push:
+    branches:
+      - deployment_pipeline
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Clean Install Dependencies
+        run: |
+          rm -rf node_modules package-lock.json
+          npm install
+
+      # - name: Set up AWS CLI
+      #   uses: aws-actions/configure-aws-credentials@v1
+      #   with:
+      #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      #     aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Build Angular App
+        run: npm run build --verbose
+
+      - name: Prepare Build Artifacts
+        run: |
+          mkdir -p package-dist
+          cp -r dist/* package.json package-dist/
+
+      - name: Create ZIP Archive
+        run: |
+          cd package-dist
+          zip -r ../dist.zip .
+
+      - name: Upload Artifact to GitHub
+        uses: actions/upload-artifact@v4
+        with:
+          name: market-build
+          path: dist.zip
